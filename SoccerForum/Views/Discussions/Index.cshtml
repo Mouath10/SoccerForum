@@ -1,0 +1,49 @@
+﻿@model IEnumerable<SoccerForum.Models.Discussion>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Discussions</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Title)</th>
+            <th>@Html.DisplayNameFor(model => model.Content)</th>
+            <th>Image</th> <!-- Column for the image -->
+            <th>@Html.DisplayNameFor(model => model.CreateDate)</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.Title)</td>
+                <td>@Html.DisplayFor(modelItem => item.Content)</td>
+                <td>
+                    <!-- Display the image if it exists -->
+                    @if (!string.IsNullOrEmpty(item.ImageFilename))
+                    {
+                        <img src="@Url.Content($"~/images/{item.ImageFilename}")" class="img-thumbnail" style="width: 100px; height: 100px;" />
+                    }
+                    else
+                    {
+                        <span>No Image</span>
+                    }
+                </td>
+                <td>@Html.DisplayFor(modelItem => item.CreateDate)</td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@item.DiscussionId">Edit</a> |
+                    <a asp-action="Details" asp-route-id="@item.DiscussionId">Details</a> |
+                    <a asp-action="Delete" asp-route-id="@item.DiscussionId">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

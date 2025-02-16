@@ -1,0 +1,37 @@
+﻿@model SoccerForum.Models.Discussion
+
+@{
+    ViewData["Title"] = "Discussion Details";
+}
+
+<h1>@Model.Title</h1>
+
+<div>
+    @if (!string.IsNullOrEmpty(Model.ImageFilename))
+    {
+        <img src="@Url.Content("~/images/" + Model.ImageFilename)" alt="Image for @Model.Title" class="img-fluid" style="max-width: 600px;" />
+
+    }
+</div>
+
+<h4>Content</h4>
+<p>@Model.Content</p>
+
+<h5>Comments:</h5>
+<ul>
+    @foreach (var comment in Model.Comments.OrderByDescending(c => c.CreateDate))
+    {
+        <li>
+            <strong>@comment.UserName</strong> (@comment.CreateDate.ToString("yyyy-MM-dd HH:mm:ss")):
+            @comment.Content
+        </li>
+    }
+</ul>
+
+<div>
+    <a asp-action="Create" asp-route-discussionId="@Model.DiscussionId" class="btn btn-primary">Add Comment</a>
+</div>
+
+<div>
+    <a asp-action="Index" class="btn btn-secondary">Back to Discussions</a>
+</div>

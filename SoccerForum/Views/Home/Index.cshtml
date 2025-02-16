@@ -1,0 +1,29 @@
+﻿@model IEnumerable<DiscussionViewModel>
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<h1>Discussion Threads</h1>
+<hr />
+
+<div class="row">
+    @foreach (var discussion in Model)
+    {
+        <div class="col-md-4">
+            <div class="card">
+                @if (!string.IsNullOrEmpty(discussion.ImageFilename))
+                {
+                    <img src="~/images/@discussion.ImageFilename" class="card-img-top" alt="Image for @discussion.Title" />
+                }
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a asp-action="GetDiscussion" asp-route-id="@discussion.DiscussionId">@discussion.Title</a>
+                    </h5>
+                    <p class="card-text">Comments: @discussion.CommentCount</p>
+                    <p class="card-text"><small class="text-muted">Created on: @discussion.CreateDate.ToString("yyyy-MM-dd HH:mm:ss")</small></p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
