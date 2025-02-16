@@ -32,3 +32,4 @@ namespace SoccerForum.Models
         public ICollection<Comment> Comments { get; set; }
     }
 }
+ 
