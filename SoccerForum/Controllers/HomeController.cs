@@ -38,6 +38,8 @@ namespace SoccerForum.Controllers
             return View(discussions);
         }
 
+
+
         // GET: Home/GetDiscussion/5
         public async Task<IActionResult> GetDiscussion(int? id)
         {

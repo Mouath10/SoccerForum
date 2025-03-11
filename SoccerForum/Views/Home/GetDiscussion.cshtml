@@ -2,33 +2,173 @@
 
 @{
     ViewData["Title"] = "Discussion Details";
+    var discussionKey = $"discussion-comments-{Model.DiscussionId}"; // Unique key for comments
+    var likeKey = $"discussion-likes-{Model.DiscussionId}"; // Unique key for likes
 }
 
-<h1>@Model.Title</h1>
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-lg">
+                <div class="card-body">
+                    <!-- Discussion Title and Description -->
+                    <h2>@Model.Title</h2>
+                    <p class="text-muted">Posted by @Model.Content on @Model.CreateDate</p>
 
-<div>
-    @if (!string.IsNullOrEmpty(Model.ImageFilename))
-    {
-        <img src="~/images/@Model.ImageFilename" alt="Image for @Model.Title" class="img-fluid" />
-    }
+                    <!-- Display the Discussion Image (if it exists) -->
+                    @if (!string.IsNullOrEmpty(Model.ImageFilename))
+                    {
+                        <div class="position-relative">
+                            <img src="@Url.Content($"/images/{Model.ImageFilename}")"
+                                 alt="@Model.Content"
+                                 class="img-fluid rounded w-100 mb-3" />
+                        </div>
+                    }
+
+                    <!-- Discussion Content (Description, etc.) -->
+                    <div class="mb-4">
+                        <p>@Model.Content</p>
+                    </div>
+
+                    <!-- Discussion Details -->
+                    <table class="table mt-4">
+                        <tr><td><strong>ID:</strong></td><td>@Model.DiscussionId</td></tr>
+                        <tr><td><strong>Created:</strong></td><td>@Model.CreateDate</td></tr>
+                    </table>
+
+                    <!-- Like & Actions -->
+                    <div class="d-flex align-items-center mt-4">
+                        <button class="btn btn-danger me-2" onclick="toggleLike()">
+                            <i id="likeIcon" class="fa-regular fa-heart"></i>
+                        </button>
+                        <span id="likeCount" class="fw-bold">0</span> Likes
+                    </div>
+                    <div class="d-flex justify-content-between mt-4">
+                        <button class="btn btn-primary" onclick="shareDiscussion()">
+                            <i class="fa-solid fa-share"></i> Share
+                        </button>
+                    </div>
+
+                    <!-- Comments Section -->
+                    <div class="mt-5">
+                        <h4>Comments</h4>
+                        <textarea class="form-control" id="commentText" placeholder="Write a comment..." rows="3"></textarea>
+                        <button class="btn btn-info mt-3" onclick="submitComment()">Submit</button>
+                        <ul class="list-group mt-3" id="commentList"></ul>
+                    </div>
+
+                    <!-- Link to go back to the discussion page -->
+                    <div class="mt-4">
+                        <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">
+                            <i class="fa-solid fa-arrow-left"></i> Back to Discussions
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<h4>Content</h4>
-<p>@Model.Content</p>
-
-<h5>Comments:</h5>
-<ul>
-    @foreach (var comment in Model.Comments)
-    {
-        <li>
-            <strong>@comment.UserName</strong> (@comment.CreateDate.ToString("yyyy-MM-dd HH:mm:ss")):
-            @comment.Content
-        </li>
+<!-- Styles -->
+<style>
+    body {
+        background-color: #f8f9fa;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
+    .container {
+        max-width: 1200px;
+        margin: auto;
+        padding: 20px;
+    }
 
-</ul>
+    .card {
+        border: none;
+        border-radius: 10px;
+        transition: transform 0.3s;
+    }
 
-<div>
-    <a asp-action="Index">Back to Discussions</a>
-</div>
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+    .btn {
+        border-radius: 5px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-info:hover {
+        background-color: #138496;
+    }
+
+    .list-group-item {
+        border: none;
+        border-bottom: 1px solid #eee;
+        padding: 15px;
+    }
+</style>
+
+<!-- JavaScript -->
+<script>
+    const discussionKey = "@discussionKey", likeKey = "@likeKey";
+
+    function updateUI(id, value, liked = false) {
+        document.getElementById(id).textContent = value;
+        const icon = document.getElementById("likeIcon");
+        icon.className = liked ? "fa-solid fa-heart text-danger" : "fa-regular fa-heart";
+    }
+
+    function loadComments() {
+        const comments = JSON.parse(localStorage.getItem(discussionKey)) || [];
+        document.getElementById("commentList").innerHTML = comments.map(c => `<li class="list-group-item">${c}</li>`).join('');
+    }
+
+    function submitComment() {
+        const input = document.getElementById("commentText");
+        if (!input.value.trim()) return;
+        const comments = JSON.parse(localStorage.getItem(discussionKey)) || [];
+        comments.push(input.value.trim());
+        localStorage.setItem(discussionKey, JSON.stringify(comments));
+        input.value = "";
+        loadComments();
+    }
+
+    function toggleLike() {
+        let likes = parseInt(localStorage.getItem(likeKey)) || 0;
+        let liked = localStorage.getItem(likeKey + "-liked") === "true";
+
+        liked ? likes-- : likes++;
+        localStorage.setItem(likeKey, likes);
+        localStorage.setItem(likeKey + "-liked", !liked);
+        updateUI("likeCount", likes, !liked);
+    }
+
+    function shareDiscussion() {
+        navigator.clipboard.writeText(window.location.href).then(() => alert('Discussion link copied!'));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        updateUI("likeCount", localStorage.getItem(likeKey) || 0, localStorage.getItem(likeKey + "-liked") === "true");
+        loadComments();
+    });
+</script>
