@@ -1,66 +1,79 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using SoccerForum.Data;
 using SoccerForum.Models;
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SoccerForum.Controllers
+[Authorize] // Restrict access to authenticated users
+public class CommentController : Controller
 {
-    public class CommentsController : Controller
+    private readonly SoccerForumContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
+
+    public CommentController(SoccerForumContext context, UserManager<ApplicationUser> userManager)
     {
-        private readonly SoccerForumContext _context;
+        _context = context;
+        _userManager = userManager;
+    }
 
-        public CommentsController(SoccerForumContext context)
+    // Create Comment
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(Comment comment)
+    {
+        if (ModelState.IsValid)
         {
-            _context = context;
-        }
-
-        // GET: Comments/Create
-        public IActionResult Create(int discussionId)
-        {
-            // Ensure the discussion exists
-            var discussion = _context.Discussions.Find(discussionId);
-            if (discussion == null)
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
             {
-                return NotFound(); // Return 404 if discussion not found
+                comment.ApplicationUserId = user.Id;
             }
 
-            // Create a new comment linked to the provided DiscussionId
-            var comment = new Comment
-            {
-                DiscussionId = discussionId
-            };
-
-            return View(comment);
-        }
-
-        // POST: Comments/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("CommentId,Content,DiscussionId")] Comment comment)
-        {
-            if (!ModelState.IsValid)
-            {
-                return View(comment); // Return with validation errors if invalid
-            }
-
-            // Ensure the associated discussion exists
-            var discussion = await _context.Discussions.FindAsync(comment.DiscussionId);
-            if (discussion == null)
-            {
-                return NotFound(); // Return 404 if discussion not found
-            }
-
-            comment.CreateDate = DateTime.UtcNow; // Set creation date in UTC
-
-            // Add the comment to the database
-            _context.Comments.Add(comment);
+            _context.Add(comment);
             await _context.SaveChangesAsync();
-
-            // Redirect to the discussion details page
-            return RedirectToAction("GetDiscussion", "Home", new { id = comment.DiscussionId });
+            return RedirectToAction("Details", "Discussion", new { id = comment.DiscussionId });
         }
+        return View(comment);
+    }
+
+    // Delete Comment - Only Owner Can Delete
+    public async Task<IActionResult> Delete(int id)
+    {
+        var comment = await _context.Comments.FindAsync(id);
+        if (comment == null)
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+        if (comment.ApplicationUserId != user?.Id)
+        {
+            return Forbid();
+        }
+
+        return View(comment);
+    }
+
+    [HttpPost, ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var comment = await _context.Comments.FindAsync(id);
+        if (comment == null)
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+        if (comment.ApplicationUserId != user?.Id)
+        {
+            return Forbid();
+        }
+
+        _context.Comments.Remove(comment);
+        await _context.SaveChangesAsync();
+        return RedirectToAction("Details", "Discussion", new { id = comment.DiscussionId });
     }
 }

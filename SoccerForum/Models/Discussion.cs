@@ -2,42 +2,33 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Http;
 
 namespace SoccerForum.Models
 {
     public class Discussion
     {
-        [Key]
         public int DiscussionId { get; set; }
 
         [Required]
-        [StringLength(100, ErrorMessage = "Title cannot exceed 100 characters.")]
+        [StringLength(100)]
         public string Title { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(2000, ErrorMessage = "Content cannot exceed 2000 characters.")]
         public string Content { get; set; } = string.Empty;
 
-        // Optional Image Filename
-        public string? ImageFilename { get; set; }
+        public string ImageFilename { get; set; } = string.Empty;
 
-        // Property for file upload, not mapped in EF
         [NotMapped]
-        [Display(Name = "Upload Image")]
         public IFormFile? ImageFile { get; set; }
 
-        // Default to UTC for consistency across servers
-        public DateTime CreateDate { get; set; }
+        public DateTime CreateDate { get; set; } = DateTime.Now;
 
-        // Navigation property for comments
-        public ICollection<Comment> Comments { get; set; }
+        // Foreign Key to ApplicationUser
+        public string? ApplicationUserId { get; set; } // Nullable FK
 
-        // Constructor to initialize collections & default values
-        public Discussion()
-        {
-            CreateDate = DateTime.UtcNow;
-            Comments = new List<Comment>();
-        }
+        // Navigation Property
+        public ApplicationUser? ApplicationUser { get; set; }
+
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 }
