@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -28,21 +29,13 @@ namespace SoccerForum.Controllers
         // GET: Discussions/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var discussion = await _context.Discussions
-                .Include(d => d.Comments) // Include related comments
+                .Include(d => d.Comments)
                 .FirstOrDefaultAsync(m => m.DiscussionId == id);
 
-            if (discussion == null)
-            {
-                return NotFound();
-            }
-
-            return View(discussion);
+            return discussion == null ? NotFound() : View(discussion);
         }
 
         // GET: Discussions/Create
@@ -52,70 +45,43 @@ namespace SoccerForum.Controllers
         }
 
         // POST: Discussions/Create
-        // POST: Discussions/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("DiscussionId,Title,Content,ImageFile,IsVisible")] Discussion discussion)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return View(discussion);
+
+            if (discussion.ImageFile != null && discussion.ImageFile.Length > 0)
             {
-                // Check if ImageFile is not null and has content
-                if (discussion.ImageFile != null && discussion.ImageFile.Length > 0)
+                var extension = Path.GetExtension(discussion.ImageFile.FileName).ToLower();
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+
+                if (!allowedExtensions.Contains(extension))
                 {
-                    // Get the file extension and validate it
-                    var extension = Path.GetExtension(discussion.ImageFile.FileName).ToLower();
-                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
-
-                    if (allowedExtensions.Contains(extension))
-                    {
-                        // Rename the uploaded file to a unique filename (GUID)
-                        discussion.ImageFilename = Guid.NewGuid().ToString() + extension;
-
-                        // Define the file path to save the image
-                        string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", discussion.ImageFilename);
-
-                        // Create the directory if it doesn't exist
-                        Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-
-                        // Save the image to the wwwroot/images folder
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await discussion.ImageFile.CopyToAsync(fileStream);
-                        }
-                    }
-                    else
-                    {
-                        // Add model error if the extension is not allowed
-                        ModelState.AddModelError("ImageFile", "Invalid image format. Only JPG, JPEG, PNG, and GIF are allowed.");
-                    }
+                    ModelState.AddModelError("ImageFile", "Invalid image format. Only JPG, JPEG, PNG, and GIF are allowed.");
+                    return View(discussion);
                 }
 
-                // Save the discussion to the database
-                _context.Add(discussion);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                discussion.ImageFilename = Guid.NewGuid() + extension;
+                string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images", discussion.ImageFilename);
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+                await using var fileStream = new FileStream(filePath, FileMode.Create);
+                await discussion.ImageFile.CopyToAsync(fileStream);
             }
 
-            return View(discussion);
+            _context.Add(discussion);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
-
 
         // GET: Discussions/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var discussion = await _context.Discussions.FirstOrDefaultAsync(m => m.DiscussionId == id);
-
-            if (discussion == null)
-            {
-                return NotFound();
-            }
-
-            return View(discussion);
+            var discussion = await _context.Discussions.FindAsync(id);
+            return discussion == null ? NotFound() : View(discussion);
         }
 
         // POST: Discussions/Edit/5
@@ -123,53 +89,31 @@ namespace SoccerForum.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("DiscussionId,Title,Content,ImageFilename,IsVisible")] Discussion discussion)
         {
-            if (id != discussion.DiscussionId)
+            if (id != discussion.DiscussionId) return NotFound();
+
+            if (!ModelState.IsValid) return View(discussion);
+
+            try
             {
-                return NotFound();
+                _context.Update(discussion);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!DiscussionExists(discussion.DiscussionId)) return NotFound();
+                throw;
             }
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(discussion);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!DiscussionExists(discussion.DiscussionId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-
-                return RedirectToAction(nameof(Index));
-            }
-
-            return View(discussion);
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Discussions/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var discussion = await _context.Discussions
-                .FirstOrDefaultAsync(m => m.DiscussionId == id);
-
-            if (discussion == null)
-            {
-                return NotFound();
-            }
-
-            return View(discussion);
+            var discussion = await _context.Discussions.FindAsync(id);
+            return discussion == null ? NotFound() : View(discussion);
         }
 
         // POST: Discussions/Delete/5
@@ -178,14 +122,8 @@ namespace SoccerForum.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var discussion = await _context.Discussions.FindAsync(id);
-
-            if (discussion != null)
-            {
-                _context.Discussions.Remove(discussion);
-            }
-
+            if (discussion != null) _context.Discussions.Remove(discussion);
             await _context.SaveChangesAsync();
-
             return RedirectToAction(nameof(Index));
         }
 

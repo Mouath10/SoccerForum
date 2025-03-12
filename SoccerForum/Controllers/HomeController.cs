@@ -22,23 +22,28 @@ namespace SoccerForum.Controllers
         // GET: Home/Index
         public async Task<IActionResult> Index()
         {
-            // Fetch discussions and sort by creation date in descending order
-            var discussions = await _context.Discussions
-                .OrderByDescending(d => d.CreateDate)
-                .Select(d => new DiscussionViewModel
-                {
-                    DiscussionId = d.DiscussionId,
-                    Title = d.Title,
-                    ImageFilename = d.ImageFilename,
-                    CreateDate = d.CreateDate,
-                    CommentCount = d.Comments.Count()
-                })
-                .ToListAsync();
+            try
+            {
+                var discussions = await _context.Discussions
+                    .OrderByDescending(d => d.CreateDate)
+                    .Select(d => new DiscussionViewModel
+                    {
+                        DiscussionId = d.DiscussionId,
+                        Title = d.Title,
+                        ImageFilename = d.ImageFilename,
+                        CreateDate = d.CreateDate,
+                        CommentCount = d.Comments.Count()
+                    })
+                    .ToListAsync();
 
-            return View(discussions);
+                return View(discussions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching discussions.");
+                return View("Error", new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            }
         }
-
-
 
         // GET: Home/GetDiscussion/5
         public async Task<IActionResult> GetDiscussion(int? id)
@@ -48,16 +53,24 @@ namespace SoccerForum.Controllers
                 return NotFound();
             }
 
-            var discussion = await _context.Discussions
-                .Include(d => d.Comments.OrderByDescending(c => c.CreateDate)) // Sort comments by creation date descending
-                .FirstOrDefaultAsync(m => m.DiscussionId == id);
-
-            if (discussion == null)
+            try
             {
-                return NotFound();
-            }
+                var discussion = await _context.Discussions
+                    .Include(d => d.Comments.OrderByDescending(c => c.CreateDate))
+                    .FirstOrDefaultAsync(m => m.DiscussionId == id);
 
-            return View(discussion);
+                if (discussion == null)
+                {
+                    return NotFound();
+                }
+
+                return View(discussion);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while fetching discussion with ID {id}.");
+                return View("Error", new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            }
         }
 
         public IActionResult Privacy()
