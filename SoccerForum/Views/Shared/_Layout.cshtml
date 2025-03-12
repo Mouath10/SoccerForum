@@ -144,6 +144,22 @@
                         </li>
                     </ul>
                 </div>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <!-- "My Threads" - Only visible to logged-in users -->
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="Discussions" asp-action="Index">My Threads</a>
+                            </li>
+                        }
+
+                        <!-- Identity/Login Links -->
+                        <li class="nav-item">
+                            <partial name="_LoginPartial" />
+                        </li>
+                    </ul>
+                </div>
             </div>
         </nav>
     </header>

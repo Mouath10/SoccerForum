@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SoccerForum.Data;
 
@@ -8,6 +9,13 @@ builder.Services.AddDbContext<SoccerForumContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DatabaseConnection"))
 );
 
+// Add Identity services
+builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false; // Set to true if you require email confirmation
+})
+    .AddEntityFrameworkStores<SoccerForumContext>();
+
 // Add controllers with views
 builder.Services.AddControllersWithViews();
 
@@ -17,21 +25,23 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts(); // Use HSTS for enhanced security
+    app.UseHsts();
 }
 
-app.UseHttpsRedirection();  // Redirect HTTP requests to HTTPS
-app.UseStaticFiles();  // Serve static files like images, CSS, JS
-
-app.UseRouting();  // Enable routing
-
-app.UseAuthorization();  // Add authorization middleware if you need to protect routes
-
-// Define the default route for controllers and views
+app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();  // Enable authentication
+app.UseAuthorization();   // Enable authorization
+
+// Identity routes (Login, Register, etc.)
+app.MapRazorPages();
+
+// Default route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-
-app.Run();  // Start the application
+app.Run();
